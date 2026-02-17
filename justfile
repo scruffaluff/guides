@@ -24,16 +24,16 @@ build:
   cp build/dist/note-*-py3-none-any.whl build/site/file/note-1.0.0-py3-none-any.whl
 
 # Execute CI workflow commands.
-ci: setup lint build
+ci: setup lint build test
 
 # Wrapper to Deno.
 [no-exit-message]
 @deno *args:
   deno {{args}}
 
-# Launch website in developer mode.
-dev *flags:
-  deno run --allow-all npm:vitepress dev . {{flags}}
+# Launch notebooks in developer mode.
+dev +paths="doc/note":
+  uv run marimo --yes edit --no-sandbox --watch {{paths}}
 
 # Fix code formatting.
 format +paths=".":
@@ -110,6 +110,10 @@ _setup:
     Invoke-Expression "& { $NushellScript } --preserve-env --dest .vendor/bin"
   }
   Write-Output "Using Nushell $(nu --version)."
+
+# Run test suites.
+test *args:
+  uv run pytest --cov {{args}}
 
 # Wrapper to Uv.
 [no-exit-message]

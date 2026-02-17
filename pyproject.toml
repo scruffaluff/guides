@@ -47,7 +47,7 @@ show_missing = true
 branch = true
 command_line = "-m pytest"
 omit = []
-source = ["guides"]
+source = ["note"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/note"]
