@@ -3,7 +3,7 @@
 import tomllib
 from pathlib import Path
 
-import note
+import nb
 
 REPO_PATH = Path(__file__).parents[1]
 
@@ -14,5 +14,5 @@ def test_version() -> None:
     with path.open("rb") as file:
         expected = tomllib.load(file)["project"]["version"]
 
-    actual = note.__version__
+    actual = nb.__version__
     assert actual == expected

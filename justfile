@@ -15,13 +15,14 @@ export PATH := if os() == "windows" {
 build:
   uv build --out-dir build/dist
   deno run --allow-all npm:vitepress build .
-  for note in (ls doc/note/*.md | get name) {
+  mkdir build/site/data
+  cp --recursive data/audio build/dist/nb-*-py3-none-any.whl build/site/data/
+  for note in (ls doc/nb/*.md | get name) {
     let subpath = $note | path relative-to doc | path parse | $"($in.parent)/($in.stem)"
     let html = $"build/site/($subpath).html"
     uv run marimo --yes export html-wasm --output $html $note
   }
-  rm --force --recursive build/site/files build/site/note/CLAUDE.md
-  cp build/dist/note-*-py3-none-any.whl build/site/file/note-1.0.0-py3-none-any.whl
+  rm --force --recursive build/site/nb/files build/site/nb/CLAUDE.md
 
 # Execute CI workflow commands.
 ci: setup lint build test
@@ -32,7 +33,7 @@ ci: setup lint build test
   deno {{args}}
 
 # Launch notebooks in developer mode.
-dev +paths="doc/note":
+dev +paths="doc/nb":
   uv run marimo --yes edit --no-sandbox --watch {{paths}}
 
 # Fix code formatting.

@@ -557,7 +557,7 @@ wheels = [
 ]
 
 [[package]]
-name = "note"
+name = "nb"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

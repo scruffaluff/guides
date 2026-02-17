@@ -18,5 +18,5 @@ onUnmounted(() => {
   allowfullscreen
   class="notebook"
   sandbox="allow-scripts allow-same-origin allow-downloads"
-  src="/guides/note/compress.html"
+  src="/guides/nb/compress.html"
 ></iframe>

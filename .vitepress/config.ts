@@ -35,7 +35,7 @@ export default defineConfig({
   },
   outDir: "build/site",
   srcDir: "doc",
-  srcExclude: ["**/note/*.md"],
+  srcExclude: ["**/nb/*.md"],
   themeConfig: {
     aside: false,
     nav: [
@@ -69,7 +69,7 @@ export default defineConfig({
     ],
     resolve: {
       alias: {
-        "@": fileURLToPath(new URL("../src/vue", import.meta.url)),
+        "@": fileURLToPath(new URL("../src/ui", import.meta.url)),
       },
     },
   },
