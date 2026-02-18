@@ -88,13 +88,19 @@ times, signal, rate = nb.read_signal(path)
 ```
 
 ```python {.marimo}
+plot_type = mo.ui.radio(options=["Freq", "Wave"], inline=True, value="Wave")
+plot_type
+```
+
+```python {.marimo}
 mo.stop(edit.value)
 exec(f"{code.value}\nprocessed = nb.normalize(compress(signal))")
-plot = nb.plot_signals([
-    {"x": times, "y": signal, "legend_label": "original"},
-    {"x": times, "y": processed, "legend_label": "compressed"},
+plot = nb.plot([
+    {"rate": rate, "y": signal, "legend_label": "original"},
+    {"rate": rate, "y": processed, "legend_label": "compressed"},
     ],
     title="Compression",
+    type=plot_type.value.lower(),
 )
 plot
 ```
