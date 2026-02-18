@@ -27,6 +27,7 @@ import marimo as mo
 import numpy
 from numpy.typing import NDArray
 import nb
+from nb import PlotType
 ```
 
 Dynamic range compressors decrease an audio signal's dynamic range by
@@ -68,43 +69,53 @@ def compress(
 
     return sign * (amplitude + make_gain)
     """.strip(),
-    disabled=not edit.value,
     language="python",
+    debounce=True,
 )
 code
 ```
 
 ```python {.marimo}
-edit = mo.ui.switch(label="Edit")
+overlay = mo.ui.switch(label="Overlay", value=True)
+type_ = mo.ui.dropdown(["Freq", "Wave"], allow_select_none=False, label="Type", value="Wave")
 ratio = mo.ui.slider(0, 10, 0.1, label="Ratio", show_value=True, value=4.0)
 threshold = mo.ui.slider(0, 1, 0.01, label="Threshold", show_value=True, value=0.8)
 file = mo.ui.file(filetypes=[".wav"], kind="button", label="Audio")
-mo.hstack([mo.hstack([edit, ratio, threshold], gap=1, justify="start"), file])
+
+mo.ui.tabs(
+    {
+        "Inputs": mo.hstack([file, ratio, threshold], gap=2, justify="start"),
+        "Visuals": mo.hstack([type_, overlay], gap=2, justify="start"),
+    },
+    label="Controls"
+)
 ```
 
 ```python {.marimo}
 path = file if file.value else "templeofhades-scratch_sample.wav"
+title = path.name() if file.value else path
 times, signal, rate = nb.read_signal(path)
-```
-
-```python {.marimo}
-plot_type = mo.ui.radio(options=["Freq", "Wave"], inline=True, value="Wave")
-plot_type
-```
-
-```python {.marimo}
-mo.stop(edit.value)
 exec(f"{code.value}\nprocessed = nb.normalize(compress(signal))")
+```
+
+```python {.marimo}
 plot = nb.plot([
     {"rate": rate, "y": signal, "legend_label": "original"},
     {"rate": rate, "y": processed, "legend_label": "compressed"},
     ],
-    title="Compression",
-    type=plot_type.value.lower(),
+    overlay=overlay.value,
+    title=title,
+    type=PlotType(type_.value.lower()),
 )
 plot
 ```
 
+We can listen to both versions of the signal below.
+
 ```python {.marimo}
-mo.hstack([mo.audio(signal, rate), mo.audio(processed, rate)], gap=2, justify="start")
+mo.hstack([mo.vstack([mo.md("### Original"), mo.audio(signal, rate)]), mo.vstack([mo.md("### Compressed"), mo.audio(processed, rate)])], gap=2, justify="start")
+```
+
+```python {.marimo}
+
 ```

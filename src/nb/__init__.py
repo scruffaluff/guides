@@ -12,8 +12,8 @@ from urllib import request
 
 import marimo
 import numpy
-from bokeh import plotting
-from bokeh.models import Plot, Range1d
+from bokeh import layouts, plotting
+from bokeh.models import Pane, Range1d
 from bokeh.palettes import Category10
 from marimo import ui
 from numpy.typing import NDArray
@@ -60,7 +60,7 @@ def normalize(signal: NDArray) -> NDArray:
     return signal / numpy.abs(signal).max()
 
 
-def plot(signals: list[dict], type: PlotType = PlotType.Wave, **kwargs: Any) -> Plot:  # noqa: A002
+def plot(signals: list[dict], type: PlotType = PlotType.Wave, **kwargs: Any) -> Pane:  # noqa: A002
     """Plot audio signals with Bokeh."""
     match type:
         case PlotType.Freq:
@@ -72,25 +72,42 @@ def plot(signals: list[dict], type: PlotType = PlotType.Wave, **kwargs: Any) -> 
             raise ValueError(message)
 
 
-def plot_freq(signals: list[dict], **kwargs: Any) -> Plot:
+def plot_freq(signals: list[dict], overlay: bool = True, **kwargs: Any) -> Pane:
     """Plot audio frequency spectrums with Bokeh."""
     palette = itertools.cycle(Category10[10])
-    plot = plotting.figure(
-        output_backend="webgl",
-        sizing_mode="stretch_width",
-        x_axis_label="Frequency (Hz)",
-        x_range=Range1d(0, 20_000),
-        y_axis_label="Amplitude",
-        **kwargs,
-    )
+    plots = []
 
     for signal in signals:
         rate = signal.pop("rate")
         sample = signal.pop("y")
         x = numpy.fft.rfftfreq(len(sample), 1 / rate)
         y = numpy.abs(numpy.fft.rfft(sample))
-
         color = signal.pop("color", next(palette))
+
+        if overlay:
+            if plots:
+                plot = plots[0]
+            else:
+                plot = plotting.figure(
+                    output_backend="webgl",
+                    sizing_mode="stretch_width",
+                    x_axis_label="Frequency (Hz)",
+                    x_range=Range1d(0, 20_000),
+                    y_axis_label="Amplitude",
+                    **kwargs,
+                )
+                plots.append(plot)
+        else:
+            plot = plotting.figure(
+                output_backend="webgl",
+                sizing_mode="stretch_width",
+                x_axis_label="Frequency (Hz)",
+                x_range=Range1d(0, 20_000),
+                y_axis_label="Amplitude",
+                **kwargs,
+            )
+            plots.append(plot)
+
         plot.line(
             x=x,
             y=y,
@@ -98,30 +115,46 @@ def plot_freq(signals: list[dict], **kwargs: Any) -> Plot:
             line_width=2,
             **signal,
         )
+        plot.legend.click_policy = "mute"
+        plot.toolbar.logo = None
+    return layouts.row(plots, sizing_mode="stretch_width")
 
-    plot.legend.click_policy = "mute"
-    plot.toolbar.logo = None
-    return plot
 
-
-def plot_wave(signals: list[dict], **kwargs: Any) -> Plot:
+def plot_wave(signals: list[dict], overlay: bool = True, **kwargs: Any) -> Pane:
     """Plot audio waveform with Bokeh."""
     palette = itertools.cycle(Category10[10])
-    plot = plotting.figure(
-        output_backend="webgl",
-        sizing_mode="stretch_width",
-        x_axis_label="Time (s)",
-        y_axis_label="Amplitude",
-        y_range=Range1d(-1, 1),
-        **kwargs,
-    )
+    plots = []
 
     for signal in signals:
         rate = signal.pop("rate")
         y = signal.pop("y")
         x = numpy.linspace(0, len(y) / rate, len(y))
-
         color = signal.pop("color", next(palette))
+
+        if overlay:
+            if plots:
+                plot = plots[0]
+            else:
+                plot = plotting.figure(
+                    output_backend="webgl",
+                    sizing_mode="stretch_width",
+                    x_axis_label="Time (s)",
+                    y_axis_label="Amplitude",
+                    y_range=Range1d(-1, 1),
+                    **kwargs,
+                )
+                plots.append(plot)
+        else:
+            plot = plotting.figure(
+                output_backend="webgl",
+                sizing_mode="stretch_width",
+                x_axis_label="Time (s)",
+                y_axis_label="Amplitude",
+                y_range=Range1d(-1, 1),
+                **kwargs,
+            )
+            plots.append(plot)
+
         plot.line(
             x=x,
             y=y,
@@ -129,10 +162,9 @@ def plot_wave(signals: list[dict], **kwargs: Any) -> Plot:
             line_width=2,
             **signal,
         )
-
-    plot.legend.click_policy = "mute"
-    plot.toolbar.logo = None
-    return plot
+        plot.legend.click_policy = "mute"
+        plot.toolbar.logo = None
+    return layouts.row(plots, sizing_mode="stretch_width")
 
 
 def read_signal(name: File) -> tuple[NDArray, NDArray, int]:
