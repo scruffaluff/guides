@@ -27,7 +27,7 @@ import marimo as mo
 import numpy
 from numpy.typing import NDArray
 import nb
-from nb import PlotType
+from nb import PlotKind
 ```
 
 Dynamic range compressors decrease an audio signal's dynamic range by
@@ -76,26 +76,26 @@ code
 ```
 
 ```python {.marimo}
-overlay = mo.ui.switch(label="Overlay", value=True)
-type_ = mo.ui.dropdown(["Freq", "Wave"], allow_select_none=False, label="Type", value="Wave")
-ratio = mo.ui.slider(0, 10, 0.1, label="Ratio", show_value=True, value=4.0)
+state, audio = nb.audio_selector("templeofhades-scratch_sample.wav")
+ratio = mo.ui.slider(0, 100, 0.1, label="Ratio", show_value=True, value=4.0)
 threshold = mo.ui.slider(0, 1, 0.01, label="Threshold", show_value=True, value=0.8)
-file = mo.ui.file(filetypes=[".wav"], kind="button", label="Audio")
+kind = mo.ui.dropdown(["Freq", "Wave"], allow_select_none=False, label="Type", value="Wave")
+overlay = mo.ui.switch(label="Overlay", value=True)
 
 mo.ui.tabs(
     {
-        "Inputs": mo.hstack([file, ratio, threshold], gap=2, justify="start"),
-        "Visuals": mo.hstack([type_, overlay], gap=2, justify="start"),
+        "File": audio,
+        "Parameter": mo.hstack([ratio, threshold], gap=2, justify="start"),
+        "Visual": mo.hstack([kind, overlay], gap=2, justify="start"),
     },
     label="Controls"
 )
 ```
 
 ```python {.marimo}
-path = file if file.value else "templeofhades-scratch_sample.wav"
-title = path.name() if file.value else path
-times, signal, rate = nb.read_signal(path)
-exec(f"{code.value}\nprocessed = nb.normalize(compress(signal))")
+source = state()
+signal, rate = source.read()
+exec(f"{code.value}\nprocessed = compress(signal)")
 ```
 
 ```python {.marimo}
@@ -104,8 +104,8 @@ plot = nb.plot([
     {"rate": rate, "y": processed, "legend_label": "compressed"},
     ],
     overlay=overlay.value,
-    title=title,
-    type=PlotType(type_.value.lower()),
+    title=source.name(),
+    type=PlotKind(kind.value.lower()),
 )
 plot
 ```

@@ -1,74 +1,68 @@
 """Personal collection of notebooks."""
 
-import contextlib
 import itertools
-import sys
-from collections.abc import Iterator
 from enum import StrEnum
-from io import BytesIO
-from pathlib import Path
-from typing import Any, BinaryIO
-from urllib import request
+from typing import Any
 
 import marimo
 import numpy
 from bokeh import layouts, plotting
 from bokeh.models import Pane, Range1d
 from bokeh.palettes import Category10
-from marimo import ui
-from numpy.typing import NDArray
-from scipy.io import wavfile
+from marimo import Html
+from marimo._runtime.state import State
+
+from nb import source
+from nb.source import Source, SourceFile, SourceInput
 
 __version__ = "0.1.0"
 
-File = str | Path | ui.file
 
-
-class PlotType(StrEnum):
-    """Signal plot options."""
+class PlotKind(StrEnum):
+    """Plot types."""
 
     Freq = "freq"
     Wave = "wave"
 
 
-@contextlib.contextmanager
-def open_file(name: File) -> Iterator[BinaryIO]:
-    """Get binary file handle for path, URL, or Marimo input."""
-    handle = None
-    try:
-        if isinstance(name, ui.file):
-            yield BytesIO(name.contents() or b"")
-        else:
-            folder = marimo.notebook_location()
-            if folder is None:
-                message = "Unable to find notebook location."
-                raise ValueError(message)
-            elif sys.platform == "emscripten":
-                url = str(folder.parent / f"data/audio/{name}")
-                yield BytesIO(request.urlopen(url).read())  # noqa: S310
-            else:
-                path = folder.parents[1] / f"data/audio/{name}"
-                handle = open(path, "rb")  # noqa: PTH123, SIM115
-                yield handle
-    finally:
-        if handle:
-            handle.close()
+def audio_selector(default: str) -> tuple[State[Source], Html]:
+    """Marimo input element to select an audio signal."""
+    get_file, set_file = marimo.state(source.select(default))
+    select = marimo.ui.dropdown(
+        SourceFile.list(),
+        allow_select_none=True,
+        label="Select File",
+        on_change=lambda name: set_file(SourceFile(name)),
+        value=None,
+    )
+    synth_ = marimo.ui.dropdown(
+        ["linear", "sine"],
+        allow_select_none=True,
+        label="Synth Generator",
+        on_change=lambda name: set_file(source.select(name)),
+        value=None,
+    )
+    upload = marimo.ui.file(
+        filetypes=[".wav"],
+        kind="button",
+        label="Upload File",
+        on_change=lambda input_: set_file(SourceInput(input_)),
+    )
+    return get_file, marimo.ui.batch(
+        marimo.md("{select} {synth} {upload}"),
+        {"select": select, "synth": synth_, "upload": upload},
+    )
 
 
-def normalize(signal: NDArray) -> NDArray:
-    """Scale signal -1 and +1 range."""
-    return signal / numpy.abs(signal).max()
-
-
-def plot(signals: list[dict], type: PlotType = PlotType.Wave, **kwargs: Any) -> Pane:  # noqa: A002
+def plot(signals: list[dict], type: PlotKind = PlotKind.Wave, **kwargs: Any) -> Pane:  # noqa: A002
     """Plot audio signals with Bokeh."""
     match type:
-        case PlotType.Freq:
+        case PlotKind.Freq:
             return plot_freq(signals, **kwargs)
-        case PlotType.Wave:
+        case PlotKind.Wave:
             return plot_wave(signals, **kwargs)
         case _:
-            message = f"Value '{type}' is not a valid PlotType."
+            message = f"Invalid choice '{type}' for PlotKind."
             raise ValueError(message)
 
 
@@ -123,6 +117,7 @@ def plot_freq(signals: list[dict], overlay: bool = True, **kwargs: Any) -> Pane:
 def plot_wave(signals: list[dict], overlay: bool = True, **kwargs: Any) -> Pane:
     """Plot audio waveform with Bokeh."""
     palette = itertools.cycle(Category10[10])
+    x_range = Range1d(float("inf"), float("-inf"))
     plots = []
 
     for signal in signals:
@@ -130,15 +125,18 @@ def plot_wave(signals: list[dict], overlay: bool = True, **kwargs: Any) -> Pane:
         y = signal.pop("y")
         x = numpy.linspace(0, len(y) / rate, len(y))
         color = signal.pop("color", next(palette))
+        x_range = Range1d(min(x[0], x_range.start), max(x[-1], x_range.end))
 
         if overlay:
             if plots:
                 plot = plots[0]
+                plot.x_range = x_range
             else:
                 plot = plotting.figure(
                     output_backend="webgl",
                     sizing_mode="stretch_width",
                     x_axis_label="Time (s)",
+                    x_range=Range1d(x[0], x[-1]),
                     y_axis_label="Amplitude",
                     y_range=Range1d(-1, 1),
                     **kwargs,
@@ -149,6 +147,7 @@ def plot_wave(signals: list[dict], overlay: bool = True, **kwargs: Any) -> Pane:
                 output_backend="webgl",
                 sizing_mode="stretch_width",
                 x_axis_label="Time (s)",
+                x_range=Range1d(x[0], x[-1]),
                 y_axis_label="Amplitude",
                 y_range=Range1d(-1, 1),
                 **kwargs,
@@ -165,13 +164,3 @@ def plot_wave(signals: list[dict], overlay: bool = True, **kwargs: Any) -> Pane:
         plot.legend.click_policy = "mute"
         plot.toolbar.logo = None
     return layouts.row(plots, sizing_mode="stretch_width")
-
-
-def read_signal(name: File) -> tuple[NDArray, NDArray, int]:
-    """Load audio file from path, URL, or Marimo input."""
-    with open_file(name) as file:
-        rate, signal = wavfile.read(file)
-    if len(signal.shape) > 1:
-        signal = numpy.mean(signal, axis=1)
-    times = numpy.arange(len(signal)) / rate
-    return times, normalize(signal), rate
