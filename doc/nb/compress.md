@@ -27,7 +27,7 @@ import marimo as mo
 import numpy
 from numpy.typing import NDArray
 import nb
-from nb import PlotKind
+from nb.plot import Kind
 ```
 
 Dynamic range compressors decrease an audio signal's dynamic range by
@@ -79,7 +79,7 @@ code
 state, audio = nb.audio_selector("templeofhades-scratch_sample.wav")
 ratio = mo.ui.slider(0, 100, 0.1, label="Ratio", show_value=True, value=4.0)
 threshold = mo.ui.slider(0, 1, 0.01, label="Threshold", show_value=True, value=0.8)
-kind = mo.ui.dropdown(["Freq", "Wave"], allow_select_none=False, label="Type", value="Wave")
+kind = mo.ui.dropdown(Kind.options(), allow_select_none=False, label="Type", value="waveform")
 overlay = mo.ui.switch(label="Overlay", value=True)
 
 mo.ui.tabs(
@@ -99,13 +99,13 @@ exec(f"{code.value}\nprocessed = compress(signal)")
 ```
 
 ```python {.marimo}
-plot = nb.plot([
+plot = nb.plot.signal([
     {"rate": rate, "y": signal, "legend_label": "original"},
     {"rate": rate, "y": processed, "legend_label": "compressed"},
     ],
+    kind=Kind(kind.value),
     overlay=overlay.value,
     title=source.name(),
-    type=PlotKind(kind.value.lower()),
 )
 plot
 ```

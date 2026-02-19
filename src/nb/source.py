@@ -94,12 +94,32 @@ class SourceInput(Source):
         return math.normalize(signal), rate
 
 
+class SourceDelta(Source):
+    """Generate Kronecker delta signal."""
+
+    def __init__(self, rate: int = 48_000, time: float = 2.0) -> None:
+        """Create a SourceDelta instance."""
+        self._rate = rate
+        self._time = time
+
+    def name(self) -> str:
+        """Find name."""
+        return "delta"
+
+    def read(self) -> tuple[NDArray, int]:
+        """Load audio signal."""
+        signal = numpy.zeros(int(self._time * self._rate))
+        signal[0] = 1
+        return signal, self._rate
+
+
 class SourceLinear(Source):
     """Generate linear signal."""
 
-    def __init__(self) -> None:
+    def __init__(self, rate: int = 48_000, time: float = 2.0) -> None:
         """Create a SourceLinear instance."""
-        self._rate = 48_000
+        self._rate = rate
+        self._time = time
 
     def name(self) -> str:
         """Find name."""
@@ -107,16 +127,19 @@ class SourceLinear(Source):
 
     def read(self) -> tuple[NDArray, int]:
         """Load audio signal."""
-        return numpy.linspace(-1, 1, 2 * self._rate), self._rate
+        return numpy.linspace(-1, 1, int(self._time * self._rate)), self._rate
 
 
 class SourceSine(Source):
     """Generate sine signal."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, freq: float = 8.0, rate: int = 48_000, time: float = 2.0
+    ) -> None:
         """Create a SourceSine instance."""
-        self._freq = 8
-        self._rate = 48_000
+        self._freq = freq
+        self._rate = rate
+        self._time = time
 
     def name(self) -> str:
         """Find name."""
@@ -124,16 +147,23 @@ class SourceSine(Source):
 
     def read(self) -> tuple[NDArray, int]:
         """Load audio signal."""
-        time = numpy.linspace(0, 2, self._rate)
+        time = numpy.linspace(0, 2, int(self._time * self._rate))
         return numpy.sin(2 * numpy.pi * self._freq * time), self._rate
 
 
 def select(name: str) -> Source:
     """Find source corresponding to given name."""
     match name.lower():
+        case "delta":
+            return SourceDelta()
         case "linear":
             return SourceLinear()
         case "sine":
             return SourceSine()
         case _:
             return SourceFile(name)
+
+
+def synths() -> list[str]:
+    """Find list of synth source names."""
+    return ["delta", "linear", "sine"]
