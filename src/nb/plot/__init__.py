@@ -3,7 +3,7 @@
 from enum import StrEnum
 from typing import Any
 
-from nb.plot import bokeh
+from nb.plot import bokeh, plotly
 
 
 class Kind(StrEnum):
@@ -18,13 +18,20 @@ class Kind(StrEnum):
         return [kind.value for kind in cls]
 
 
-def signal(signals: list[dict], kind: Kind = Kind.Waveform, **kwargs: Any) -> Any:  # noqa: ANN401
+def signal(
+    signals: list[dict],
+    backend: str = "plotly",
+    kind: Kind = Kind.Waveform,
+    **kwargs: Any,
+) -> Any:  # noqa: ANN401
     """Plot audio signals."""
+    module = {"bokeh": bokeh, "plotly": plotly}[backend]
+
     match kind:
         case Kind.Frequency:
-            return bokeh.frequency(signals, **kwargs)
+            return module.frequency(signals, **kwargs)
         case Kind.Waveform:
-            return bokeh.waveform(signals, **kwargs)
+            return module.waveform(signals, **kwargs)
         case _:
             message = f"Invalid choice '{kind}' for PlotKind."
             raise ValueError(message)

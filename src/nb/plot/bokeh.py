@@ -24,6 +24,8 @@ def frequency(signals: list[dict], overlay: bool = True, **kwargs: Any) -> Pane:
         y = math.loudness(y_ / numpy.abs(y_).max())
         color = signal.pop("color", next(palette))
 
+        if kwargs.pop("smooth", False):
+            y = numpy.convolve(y, numpy.ones(16) / 16, mode="same")
         if overlay:
             if plots:
                 plot = plots[0]
@@ -73,7 +75,7 @@ def frequency(signals: list[dict], overlay: bool = True, **kwargs: Any) -> Pane:
 def waveform(signals: list[dict], overlay: bool = True, **kwargs: Any) -> Pane:
     """Plot audio waveform with Bokeh."""
     palette = itertools.cycle(Category10[10])
-    x_range = Range1d(float("inf"), float("-inf"))
+    x_range = Range1d(0, max(len(signal["y"]) / signal["rate"] for signal in signals))
     plots = []
 
     for signal in signals:
@@ -81,33 +83,46 @@ def waveform(signals: list[dict], overlay: bool = True, **kwargs: Any) -> Pane:
         y = signal.pop("y")
         x = numpy.linspace(0, len(y) / rate, len(y))
         color = signal.pop("color", next(palette))
-        x_range = Range1d(min(x[0], x_range.start), max(x[-1], x_range.end))
 
+        x, y = math.downsample(x, y)
         if overlay:
             if plots:
                 plot = plots[0]
-                plot.x_range = x_range
             else:
                 plot = plotting.figure(
                     output_backend="webgl",
                     sizing_mode="stretch_width",
                     x_axis_label="Time (s)",
-                    x_range=Range1d(x[0], x[-1]),
+                    x_range=x_range,
                     y_axis_label="Amplitude",
                     y_range=Range1d(-1, 1),
+                    tools="pan,box_zoom,wheel_zoom,save,reset,undo,redo",
                     **kwargs,
                 )
                 plots.append(plot)
         else:
-            plot = plotting.figure(
-                output_backend="webgl",
-                sizing_mode="stretch_width",
-                x_axis_label="Time (s)",
-                x_range=Range1d(x[0], x[-1]),
-                y_axis_label="Amplitude",
-                y_range=Range1d(-1, 1),
-                **kwargs,
-            )
+            if plots:
+                # Share pan tools over both plots.
+                plot = plotting.figure(
+                    output_backend="webgl",
+                    sizing_mode="stretch_width",
+                    x_axis_label="Time (s)",
+                    x_range=plots[0].x_range,
+                    y_axis_label="Amplitude",
+                    y_range=plots[0].y_range,
+                    tools="pan,box_zoom,wheel_zoom,save,reset,undo,redo",
+                    **kwargs,
+                )
+            else:
+                plot = plotting.figure(
+                    output_backend="webgl",
+                    sizing_mode="stretch_width",
+                    x_axis_label="Time (s)",
+                    x_range=x_range,
+                    y_axis_label="Amplitude",
+                    y_range=Range1d(-1, 1),
+                    **kwargs,
+                )
             plots.append(plot)
 
         plot.line(

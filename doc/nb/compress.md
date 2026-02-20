@@ -115,7 +115,3 @@ We can listen to both versions of the signal below.
 ```python {.marimo}
 mo.hstack([mo.vstack([mo.md("### Original"), mo.audio(signal, rate)]), mo.vstack([mo.md("### Compressed"), mo.audio(processed, rate)])], gap=2, justify="start")
 ```
-
-```python {.marimo}
-
-```
