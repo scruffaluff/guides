@@ -51,7 +51,7 @@ lint +paths=".":
 # List all commands available in justfile.
 [default]
 list:
-  just --list
+  @just --list
 
 # Wrapper to Nushell.
 [no-exit-message]
@@ -91,7 +91,7 @@ _setup:
   #!/usr/bin/env sh
   set -eu
   if [ ! -x "$(command -v nu)" ]; then
-    echo 'Installing Nushell'.
+    echo 'Installing Nushell.'
     curl --fail --location --show-error \
       https://scruffaluff.github.io/picoware/install/nushell.sh | sh -s -- \
       --preserve-env --dest .vendor/bin
