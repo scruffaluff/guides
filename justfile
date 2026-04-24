@@ -50,13 +50,13 @@ lint +paths=".":
 
 # List all commands available in justfile.
 [default]
-list:
-  @just --list
+@list:
+  just --list
 
 # Wrapper to Nushell.
 [no-exit-message]
 @nu *args:
-  nu {{args}}
+  nu --commands "{{args}}"
 
 # Serve built website.
 serve *flags: build
